@@ -1,0 +1,1071 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="An interactive view of carbon-credit investment pathways from foreign buyers to African landscapes.">
+  <title>Carbon Grab Monitor — Africa Tele-Coupling Map</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <style>
+    :root {
+      --ink: #10243a;
+      --ink-soft: #314960;
+      --muted: #6e8193;
+      --canvas: #f3f7f6;
+      --surface: #ffffff;
+      --line: #dbe5e5;
+      --red: #d94c4c;
+      --coral: #ee7564;
+      --cyan: #20a8a4;
+      --cyan-dark: #087c82;
+      --gold: #d7a942;
+      --navy: #10243a;
+      --shadow: 0 18px 50px rgba(16, 36, 58, 0.12);
+      --radius-lg: 22px;
+      --radius-md: 14px;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--canvas); }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 6% 3%, rgba(32, 168, 164, 0.11), transparent 24rem),
+        radial-gradient(circle at 93% 8%, rgba(238, 117, 100, 0.12), transparent 27rem),
+        var(--canvas);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    button { font: inherit; }
+
+    .page-shell {
+      width: min(1480px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 22px 0 40px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 28px;
+      align-items: end;
+      padding: clamp(28px, 4vw, 54px);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(118deg, #10243a 0%, #173552 58%, #0b6f74 140%);
+      box-shadow: var(--shadow);
+      color: #fff;
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      pointer-events: none;
+    }
+
+    .hero::before {
+      width: 430px;
+      height: 430px;
+      right: -165px;
+      top: -280px;
+      border: 1px solid rgba(255,255,255,0.17);
+      box-shadow: 0 0 0 40px rgba(255,255,255,0.04), 0 0 0 100px rgba(255,255,255,0.025);
+    }
+
+    .hero::after {
+      width: 180px;
+      height: 180px;
+      right: 12%;
+      bottom: -124px;
+      background: rgba(238,117,100,0.2);
+      filter: blur(1px);
+    }
+
+    .hero-copy, .hero-meta { position: relative; z-index: 1; }
+    .eyebrow {
+      margin: 0 0 10px;
+      color: #9ce0d8;
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 890px;
+      font-size: clamp(2rem, 4vw, 4rem);
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+      font-weight: 780;
+    }
+
+    .hero-copy > p:last-child {
+      max-width: 780px;
+      margin: 18px 0 0;
+      color: rgba(255,255,255,0.8);
+      font-size: clamp(0.98rem, 1.6vw, 1.13rem);
+    }
+
+    .hero-meta {
+      min-width: 205px;
+      padding: 16px 18px;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 12px;
+      background: rgba(4, 24, 40, 0.26);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero-meta strong {
+      display: block;
+      color: #fff;
+      font-size: 0.95rem;
+      line-height: 1.2;
+    }
+
+    .hero-meta span {
+      display: block;
+      margin-top: 4px;
+      color: rgba(255,255,255,0.72);
+      font-size: 0.78rem;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: -25px 24px 0;
+      position: relative;
+      z-index: 2;
+    }
+
+    .metric {
+      min-height: 112px;
+      padding: 18px 20px;
+      border: 1px solid rgba(219,229,229,0.9);
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.96);
+      box-shadow: 0 10px 26px rgba(16,36,58,0.09);
+    }
+
+    .metric-value {
+      display: block;
+      color: var(--red);
+      font-size: clamp(1.5rem, 2.5vw, 2.15rem);
+      line-height: 1;
+      letter-spacing: -0.05em;
+      font-weight: 780;
+    }
+
+    .metric-label {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 750;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .metric-note {
+      display: block;
+      margin-top: 3px;
+      color: #9aa8b3;
+      font-size: 0.75rem;
+    }
+
+    .workspace { margin-top: 28px; }
+
+    .tablist {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.8);
+      box-shadow: 0 6px 18px rgba(16,36,58,0.035);
+    }
+
+    .tab {
+      appearance: none;
+      border: 0;
+      border-radius: 9px;
+      padding: 10px 14px;
+      color: var(--ink-soft);
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 720;
+      transition: background .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+
+    .tab:hover { background: #eaf3f2; color: var(--ink); }
+    .tab:focus-visible { outline: 3px solid rgba(32,168,164,0.35); outline-offset: 2px; }
+    .tab[aria-selected="true"] {
+      background: var(--navy);
+      color: #fff;
+      box-shadow: 0 5px 12px rgba(16,36,58,0.2);
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 310px;
+      gap: 18px;
+      margin-top: 18px;
+      align-items: start;
+    }
+
+    .panel[hidden] { display: none; }
+
+    .chart-card, .side-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: rgba(255,255,255,0.97);
+      box-shadow: 0 12px 35px rgba(16,36,58,0.07);
+    }
+
+    .chart-card { overflow: hidden; }
+    .chart-head {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 22px 24px 16px;
+      border-bottom: 1px solid #edf1f1;
+    }
+
+    .chart-kicker {
+      margin: 0 0 5px;
+      color: var(--cyan-dark);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .chart-head h2 {
+      margin: 0;
+      color: var(--ink);
+      font-size: clamp(1.08rem, 2vw, 1.42rem);
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+
+    .chart-note {
+      max-width: 255px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-align: right;
+    }
+
+    .chart-actions {
+      display: grid;
+      justify-items: end;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .export-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 34px;
+      padding: 8px 11px;
+      border: 1px solid #b9d6d2;
+      border-radius: 8px;
+      color: #0b626a;
+      background: #f1faf8;
+      cursor: pointer;
+      font-size: 0.76rem;
+      font-weight: 780;
+      letter-spacing: 0.01em;
+      transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
+    }
+
+    .export-button::before {
+      content: "↓";
+      display: grid;
+      width: 17px;
+      height: 17px;
+      place-items: center;
+      border-radius: 5px;
+      color: #ffffff;
+      background: var(--cyan-dark);
+      font-size: 0.82rem;
+      line-height: 1;
+    }
+
+    .export-button:hover:not(:disabled) {
+      border-color: var(--cyan-dark);
+      background: #e2f4f1;
+      transform: translateY(-1px);
+    }
+
+    .export-button:focus-visible {
+      outline: 3px solid rgba(32,168,164,0.35);
+      outline-offset: 2px;
+    }
+
+    .export-button:disabled {
+      cursor: wait;
+      opacity: 0.56;
+    }
+
+    .export-status {
+      min-height: 1em;
+      max-width: 255px;
+      color: #66808a;
+      font-size: 0.68rem;
+      line-height: 1.3;
+      text-align: right;
+    }
+
+    .plot-wrap {
+      position: relative;
+      min-height: clamp(460px, 60vh, 690px);
+      padding: 2px;
+    }
+
+    .plot {
+      width: 100%;
+      height: clamp(460px, 60vh, 690px);
+    }
+
+    .chart-caption {
+      display: flex;
+      gap: 9px;
+      align-items: flex-start;
+      margin: 0;
+      padding: 13px 24px 18px;
+      color: var(--muted);
+      border-top: 1px solid #edf1f1;
+      font-size: 0.79rem;
+    }
+
+    .chart-caption::before {
+      content: "i";
+      display: grid;
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--cyan-dark);
+      background: #e2f4f1;
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+
+    .sidebar { display: grid; gap: 14px; }
+    .side-card { padding: 20px; }
+    .side-kicker {
+      margin: 0 0 7px;
+      color: var(--red);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .side-card h3 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 1.12rem;
+      line-height: 1.16;
+      letter-spacing: -0.03em;
+    }
+
+    .side-card p {
+      margin: 10px 0 0;
+      color: var(--ink-soft);
+      font-size: 0.88rem;
+    }
+
+    .insight-list {
+      display: grid;
+      gap: 12px;
+      margin: 16px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .insight-list li {
+      display: grid;
+      grid-template-columns: 26px 1fr;
+      gap: 10px;
+      align-items: start;
+      color: var(--ink-soft);
+      font-size: 0.82rem;
+    }
+
+    .insight-index {
+      display: grid;
+      width: 26px;
+      height: 26px;
+      place-items: center;
+      border-radius: 8px;
+      color: var(--cyan-dark);
+      background: #e6f5f3;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+
+    .legend { display: grid; gap: 11px; margin-top: 16px; }
+    .legend-row { display: flex; gap: 10px; align-items: center; color: var(--ink-soft); font-size: 0.8rem; }
+    .legend-line { width: 32px; height: 0; border-top: 3px solid var(--coral); border-radius: 999px; }
+    .legend-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--cyan); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--cyan-dark); }
+    .legend-swatch { width: 32px; height: 12px; border-radius: 999px; background: linear-gradient(90deg, #e7f5f3, #3db9b0, #0e6574); }
+
+    .method-card { background: #ecf5f3; border-color: #d3e9e6; }
+    .method-card p { color: #345b62; font-size: 0.79rem; }
+    .method-card strong { color: var(--cyan-dark); }
+
+    .footer-note {
+      margin: 18px 4px 0;
+      color: #7f909b;
+      font-size: 0.74rem;
+      text-align: center;
+    }
+
+    .loading-note {
+      display: grid;
+      height: 100%;
+      place-items: center;
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    @media (max-width: 980px) {
+      .content-grid { grid-template-columns: 1fr; }
+      .sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .method-card { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 720px) {
+      .page-shell { width: min(100% - 20px, 1480px); padding-top: 10px; }
+      .hero { grid-template-columns: 1fr; padding: 28px 23px; }
+      .hero-meta { width: fit-content; }
+      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: -16px 10px 0; }
+      .metric { min-height: 94px; padding: 15px; }
+      .tab { flex: 1 1 40%; text-align: center; }
+      .chart-head { padding: 18px; flex-direction: column; }
+      .chart-note { max-width: none; text-align: left; }
+      .chart-actions { width: 100%; justify-items: start; }
+      .export-status { max-width: none; text-align: left; }
+      .plot-wrap, .plot { min-height: 450px; height: 450px; }
+      .chart-caption { padding: 13px 18px 16px; }
+      .sidebar { grid-template-columns: 1fr; }
+      .method-card { grid-column: auto; }
+    }
+
+    @media (max-width: 420px) {
+      .metric-grid { gap: 8px; }
+      .metric-value { font-size: 1.4rem; }
+      .metric-label { font-size: 0.68rem; }
+      .tab { padding: 9px 8px; font-size: 0.79rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Interactive research dashboard</p>
+        <h1>Carbon Grab: Global Emitters <span aria-hidden="true">→</span> African Landscapes</h1>
+        <p>Trace the investment pathways, destination-country exposure, and buyer concentration behind carbon-credit activity across African landscapes.</p>
+      </div>
+      <div class="hero-meta" aria-label="Dataset snapshot">
+        <strong>Tele-coupling map</strong>
+        <span>Foreign buyers · African host countries</span>
+      </div>
+    </header>
+
+    <section class="metric-grid" aria-label="Key indicators">
+      <article class="metric"><span class="metric-value">2,458</span><span class="metric-label">Projects</span><span class="metric-note">Across the supplied records</span></article>
+      <article class="metric"><span class="metric-value">401.9M</span><span class="metric-label">Credits issued</span><span class="metric-note">Instrument volume in the dataset</span></article>
+      <article class="metric"><span class="metric-value">46</span><span class="metric-label">African countries</span><span class="metric-note">Host-country coverage</span></article>
+      <article class="metric"><span class="metric-value">10</span><span class="metric-label">Foreign buyers</span><span class="metric-note">Buyer / market grouping</span></article>
+    </section>
+
+    <main class="workspace">
+      <div class="tablist" role="tablist" aria-label="Map views">
+        <button class="tab" role="tab" id="tab-flow" aria-controls="panel-flow" aria-selected="true" data-panel="flow">Flow network</button>
+        <button class="tab" role="tab" id="tab-africa" aria-controls="panel-africa" aria-selected="false" data-panel="africa">Africa footprint</button>
+        <button class="tab" role="tab" id="tab-world" aria-controls="panel-world" aria-selected="false" data-panel="world">Global context</button>
+        <button class="tab" role="tab" id="tab-buyers" aria-controls="panel-buyers" aria-selected="false" data-panel="buyers">Buyer ranking</button>
+      </div>
+
+      <div class="content-grid">
+        <section class="chart-stage" aria-live="polite">
+          <section class="panel" id="panel-flow" role="tabpanel" aria-labelledby="tab-flow">
+            <article class="chart-card">
+              <header class="chart-head">
+                <div><p class="chart-kicker">Cross-border pathways</p><h2>Foreign buyer markets to African host countries</h2></div>
+                <div class="chart-actions">
+                  <p class="chart-note">Arc width reflects the credit volume represented in each named pathway.</p>
+                  <button class="export-button" type="button" data-export="flow" disabled>Save PNG with colour key</button>
+                  <span class="export-status" id="export-status-flow" role="status" aria-live="polite"></span>
+                </div>
+              </header>
+              <div class="plot-wrap"><div class="plot" id="flow-chart" aria-label="World map showing overseas carbon-credit pathways to African countries"></div></div>
+              <p class="chart-caption">Coral arcs show the available buyer-to-host-country connections. Teal markers indicate host-country project portfolios; fill colour shows credits associated with the named foreign pathways.</p>
+            </article>
+          </section>
+
+          <section class="panel" id="panel-africa" role="tabpanel" aria-labelledby="tab-africa" hidden>
+            <article class="chart-card">
+              <header class="chart-head">
+                <div><p class="chart-kicker">Host-country exposure</p><h2>Where carbon-credit activity is concentrated</h2></div>
+                <div class="chart-actions">
+                  <p class="chart-note">Hover over a country marker to compare issued credits and project counts.</p>
+                  <button class="export-button" type="button" data-export="africa" disabled>Save PNG with colour key</button>
+                  <span class="export-status" id="export-status-africa" role="status" aria-live="polite"></span>
+                </div>
+              </header>
+              <div class="plot-wrap"><div class="plot" id="africa-chart" aria-label="Map of African countries showing carbon-credit concentration"></div></div>
+              <p class="chart-caption">Country shading represents available overseas-linked credits. Marker size reflects project count, making concentration visible independently from credit volume.</p>
+            </article>
+          </section>
+
+          <section class="panel" id="panel-world" role="tabpanel" aria-labelledby="tab-world" hidden>
+            <article class="chart-card">
+              <header class="chart-head">
+                <div><p class="chart-kicker">Network context</p><h2>Global distribution of recorded involvement</h2></div>
+                <div class="chart-actions">
+                  <p class="chart-note">The palette distinguishes the scale of the credit activity represented in the supplied records.</p>
+                  <button class="export-button" type="button" data-export="world" disabled>Save PNG with colour key</button>
+                  <span class="export-status" id="export-status-world" role="status" aria-live="polite"></span>
+                </div>
+              </header>
+              <div class="plot-wrap"><div class="plot" id="world-chart" aria-label="World choropleth of carbon-credit involvement"></div></div>
+              <p class="chart-caption">This view places African recipient countries and recorded buyer markets in the same global frame. It is a portfolio-context map, not a measure of emissions responsibility.</p>
+            </article>
+          </section>
+
+          <section class="panel" id="panel-buyers" role="tabpanel" aria-labelledby="tab-buyers" hidden>
+            <article class="chart-card">
+              <header class="chart-head">
+                <div><p class="chart-kicker">Buyer concentration</p><h2>Foreign buyer / market volumes directed to Africa</h2></div>
+                <p class="chart-note">Values represent credits issued to Africa in the supplied buyer-level dataset.</p>
+              </header>
+              <div class="plot-wrap"><div class="plot" id="buyers-chart" aria-label="Bar chart ranking foreign carbon-credit buyers"></div></div>
+              <p class="chart-caption">The ranking highlights the concentration of recorded activity among a small group of external markets. Hover over any bar for the precise credit count.</p>
+            </article>
+          </section>
+        </section>
+
+        <aside class="sidebar" aria-label="Map interpretation">
+          <section class="side-card" id="story-card">
+            <p class="side-kicker" id="story-kicker">Reading the network</p>
+            <h3 id="story-title">Capital flows, landscapes receive</h3>
+            <p id="story-copy">The flow view foregrounds the distance between external credit buyers and the African landscapes where projects and credits are recorded.</p>
+            <ul class="insight-list" id="story-list"></ul>
+          </section>
+
+          <section class="side-card">
+            <p class="side-kicker">Visual key</p>
+            <h3 id="legend-title">How to read the marks</h3>
+            <div class="legend" id="legend-body">
+              <div class="legend-row"><span class="legend-line"></span><span>Named foreign buyer → host-country pathway</span></div>
+              <div class="legend-row"><span class="legend-dot"></span><span>Host-country project portfolio</span></div>
+              <div class="legend-row"><span class="legend-swatch"></span><span>Lower → higher overseas-linked credits</span></div>
+            </div>
+          </section>
+
+          <section class="side-card method-card">
+            <p class="side-kicker">Method note</p>
+            <p><strong>Interpret with care.</strong> This dashboard visualizes the credit and project records embedded in this file. It indicates recorded allocation patterns, not verified carbon outcomes, land ownership, or community consent.</p>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <p class="footer-note">Prepared from the supplied dataset snapshot. Hover over charts for detail; use the view switcher to compare geographic concentration and buyer scale.</p>
+  </div>
+
+  <script>
+    const arcs = [{"from": "United States", "to": "DR Congo", "src_lat": 39.8, "src_lon": -98.5, "dst_lat": -4.0, "dst_lon": 21.8, "credits": 42534256.0}, {"from": "United States", "to": "Kenya", "src_lat": 39.8, "src_lon": -98.5, "dst_lat": -0.02, "dst_lon": 37.9, "credits": 23147527.0}, {"from": "United Kingdom", "to": "South Africa", "src_lat": 55.4, "src_lon": -3.4, "dst_lat": -30.6, "dst_lon": 22.9, "credits": 14839318.0}, {"from": "United Kingdom", "to": "Rwanda", "src_lat": 55.4, "src_lon": -3.4, "dst_lat": -1.9, "dst_lon": 29.9, "credits": 8207382.0}, {"from": "United Kingdom", "to": "Tanzania", "src_lat": 55.4, "src_lon": -3.4, "dst_lat": -6.4, "dst_lon": 34.9, "credits": 6125602.0}, {"from": "European Union", "to": "Madagascar", "src_lat": 50.5, "src_lon": 8.5, "dst_lat": -18.8, "dst_lon": 46.9, "credits": 4302290.0}, {"from": "United Kingdom", "to": "Uganda", "src_lat": 55.4, "src_lon": -3.4, "dst_lat": 1.4, "dst_lon": 32.9, "credits": 4174957.0}, {"from": "United Kingdom", "to": "Mozambique", "src_lat": 55.4, "src_lon": -3.4, "dst_lat": -18.7, "dst_lon": 35.5, "credits": 3223550.0}, {"from": "United Kingdom", "to": "Madagascar", "src_lat": 55.4, "src_lon": -3.4, "dst_lat": -18.8, "dst_lon": 46.9, "credits": 3147415.0}, {"from": "European Union", "to": "Rwanda", "src_lat": 50.5, "src_lon": 8.5, "dst_lat": -1.9, "dst_lon": 29.9, "credits": 2643908.0}, {"from": "France", "to": "Kenya", "src_lat": 46.6, "src_lon": 2.3, "dst_lat": -0.02, "dst_lon": 37.9, "credits": 2617183.0}, {"from": "United Kingdom", "to": "Eritrea", "src_lat": 55.4, "src_lon": -3.4, "dst_lat": 15.2, "dst_lon": 39.8, "credits": 2526653.0}, {"from": "United Kingdom", "to": "Kenya", "src_lat": 55.4, "src_lon": -3.4, "dst_lat": -0.02, "dst_lon": 37.9, "credits": 2462674.0}, {"from": "United Kingdom", "to": "Malawi", "src_lat": 55.4, "src_lon": -3.4, "dst_lat": -13.3, "dst_lon": 34.3, "credits": 2225559.0}, {"from": "United Kingdom", "to": "Nigeria", "src_lat": 55.4, "src_lon": -3.4, "dst_lat": 9.1, "dst_lon": 8.7, "credits": 1855673.0}];
+    const bubbles = [{"country": "Kenya", "lat": -0.02, "lon": 37.9, "credits": 85406086.0, "count": 346}, {"country": "DR Congo", "lat": -4.0, "lon": 21.8, "credits": 46877343.0, "count": 60}, {"country": "Uganda", "lat": 1.4, "lon": 32.9, "credits": 34800200.0, "count": 296}, {"country": "Zimbabwe", "lat": -19.0, "lon": 29.2, "credits": 33810113.0, "count": 30}, {"country": "Zambia", "lat": -13.1, "lon": 27.8, "credits": 25144687.0, "count": 90}, {"country": "South Africa", "lat": -30.6, "lon": 22.9, "credits": 23805341.0, "count": 173}, {"country": "Rwanda", "lat": -1.9, "lon": 29.9, "credits": 21399217.0, "count": 225}, {"country": "Malawi", "lat": -13.3, "lon": 34.3, "credits": 20037267.0, "count": 158}, {"country": "Ghana", "lat": 7.9, "lon": -1.0, "credits": 15943460.0, "count": 70}, {"country": "Madagascar", "lat": -18.8, "lon": 46.9, "credits": 13626881.0, "count": 138}, {"country": "Nigeria", "lat": 9.1, "lon": 8.7, "credits": 13540409.0, "count": 129}, {"country": "Ethiopia", "lat": 9.1, "lon": 40.5, "credits": 13028657.0, "count": 89}, {"country": "Tanzania", "lat": -6.4, "lon": 34.9, "credits": 8697593.0, "count": 94}, {"country": "Cote d'Ivoire", "lat": 7.5, "lon": -5.5, "credits": 5670123.0, "count": 15}, {"country": "Egypt", "lat": 26.8, "lon": 30.8, "credits": 4869009.0, "count": 24}, {"country": "Burundi", "lat": -3.4, "lon": 29.9, "credits": 4761112.0, "count": 14}, {"country": "Sierra Leone", "lat": 8.5, "lon": -11.5, "credits": 4703121.0, "count": 33}, {"country": "Mozambique", "lat": -18.7, "lon": 35.5, "credits": 4105987.0, "count": 96}, {"country": "Somalia", "lat": 5.2, "lon": 46.2, "credits": 3171572.0, "count": 4}, {"country": "Senegal", "lat": 14.5, "lon": -14.5, "credits": 2928153.0, "count": 31}, {"country": "Eritrea", "lat": 15.2, "lon": 39.8, "credits": 2552354.0, "count": 45}, {"country": "Mali", "lat": 17.6, "lon": -4.0, "credits": 1692001.0, "count": 14}, {"country": "Burkina Faso", "lat": 12.2, "lon": -1.6, "credits": 1453207.0, "count": 102}, {"country": "Central African Republic", "lat": 6.6, "lon": 20.5, "credits": 1294618.0, "count": 6}, {"country": "Morocco", "lat": 31.8, "lon": -7.1, "credits": 1252860.0, "count": 15}, {"country": "Togo", "lat": 8.6, "lon": 0.8, "credits": 1032825.0, "count": 38}, {"country": "Cameroon", "lat": 7.4, "lon": 12.4, "credits": 995725.0, "count": 19}, {"country": "Mauritania", "lat": 21.0, "lon": -10.9, "credits": 953204.0, "count": 2}, {"country": "Gambia", "lat": 13.4, "lon": -15.3, "credits": 896511.0, "count": 11}, {"country": "Benin", "lat": 9.3, "lon": 2.3, "credits": 890827.0, "count": 17}, {"country": "Mauritius", "lat": -20.3, "lon": 57.6, "credits": 633808.0, "count": 4}, {"country": "Namibia", "lat": -22.9, "lon": 18.5, "credits": 536781.0, "count": 7}, {"country": "Sudan", "lat": 12.9, "lon": 30.2, "credits": 368399.0, "count": 5}, {"country": "Guinea-Bissau", "lat": 11.8, "lon": -15.2, "credits": 302043.0, "count": 2}, {"country": "Lesotho", "lat": -29.6, "lon": 28.3, "credits": 273332.0, "count": 5}, {"country": "Angola", "lat": -11.2, "lon": 17.9, "credits": 166815.0, "count": 6}, {"country": "Chad", "lat": 15.5, "lon": 18.7, "credits": 131471.0, "count": 5}, {"country": "Guinea", "lat": 9.9, "lon": -9.7, "credits": 66779.0, "count": 12}, {"country": "Niger", "lat": 17.6, "lon": 8.1, "credits": 38769.0, "count": 2}, {"country": "Liberia", "lat": 6.4, "lon": -9.4, "credits": 22906.0, "count": 3}, {"country": "Comoros", "lat": -11.6, "lon": 43.3, "credits": 17454.0, "count": 5}, {"country": "Gabon", "lat": -0.8, "lon": 11.6, "credits": 0.0, "count": 7}, {"country": "Djibouti", "lat": 11.8, "lon": 42.6, "credits": 0.0, "count": 3}, {"country": "Botswana", "lat": -22.3, "lon": 24.7, "credits": 0.0, "count": 4}, {"country": "Tunisia", "lat": 33.9, "lon": 0.9, "credits": 0.0, "count": 3}, {"country": "Cabo Verde", "lat": 16.5, "lon": -23.0, "credits": 0.0, "count": 1}];
+
+    const africaISO = ["KEN","COD","ZWE","UGA","ZAF","GHA","ZMB","MWI","NGA","ETH","RWA","TZA","MDG","CIV","BDI","EGY","MOZ","SLE","SOM","ERI","SEN","MLI","BFA","CAF","MAR","MRT","CMR","GMB","MUS","TGO","BEN","SDN","GNB","NAM","LSO","AGO","TCD","GIN","NER","LBR","COM","GAB","DJI","BWA","TUN","CPV"];
+    const africaNames = ["Kenya","DR Congo","Zimbabwe","Uganda","South Africa","Ghana","Zambia","Malawi","Nigeria","Ethiopia","Rwanda","Tanzania","Madagascar","Cote d'Ivoire","Burundi","Egypt","Mozambique","Sierra Leone","Somalia","Eritrea","Senegal","Mali","Burkina Faso","Central African Republic","Morocco","Mauritania","Cameroon","Gambia","Mauritius","Togo","Benin","Sudan","Guinea-Bissau","Namibia","Lesotho","Angola","Chad","Guinea","Niger","Liberia","Comoros","Gabon","Djibouti","Botswana","Tunisia","Cabo Verde"];
+
+    const buyerTotals = [
+      { name: 'United States', credits: 66947236 },
+      { name: 'United Kingdom', credits: 59077888 },
+      { name: 'European Union', credits: 11019802 },
+      { name: 'France', credits: 3227958 },
+      { name: 'China', credits: 1589229 },
+      { name: 'Switzerland', credits: 1461248 },
+      { name: 'Australia', credits: 820613 },
+      { name: 'India', credits: 434754 },
+      { name: 'Unknown', credits: 0 },
+      { name: 'Netherlands', credits: 0 }
+    ];
+
+    const stories = {
+      flow: {
+        kicker: 'Reading the network',
+        title: 'Capital flows, landscapes receive',
+        copy: 'The flow view foregrounds the distance between external credit buyers and the African landscapes where projects and credits are recorded.',
+        points: ['Thicker coral lines denote larger named credit pathways.', 'Teal circles scale with the number of projects registered in each host country.', 'Use hover detail to see the country-specific credit and project figures.']
+      },
+      africa: {
+        kicker: 'Host-country footprint',
+        title: 'Concentration is not evenly distributed',
+        copy: 'The Africa view separates credit volume from project count so that countries with many small projects can be distinguished from fewer, high-volume entries.',
+        points: ['Darker shading indicates more overseas-linked credits.', 'Larger bubbles indicate more recorded projects.', 'Country labels appear on hover to preserve map legibility.']
+      },
+      world: {
+        kicker: 'Global context',
+        title: 'A network spanning buyers and hosts',
+        copy: 'The global frame places destination countries and recorded buyer markets into a single visual context without implying a direct causal relationship for every shaded country.',
+        points: ['African host countries remain visible alongside buyer-market markers.', 'The map is a geographic context view rather than a complete transaction ledger.', 'Compare it with the pathway view to interpret named connections.']
+      },
+      buyers: {
+        kicker: 'Buyer concentration',
+        title: 'External markets are unevenly represented',
+        copy: 'The buyer ranking shows how the recorded credit volume is concentrated among a small number of external markets in the supplied data.',
+        points: ['Bars are sorted by issued-credit volume.', 'Hover any bar for an exact value.', 'Zero values are retained for transparency in the supplied buyer list.']
+      }
+    };
+
+    // Publication-oriented sequential ramp: a restrained, colour-blind-aware olive-to-slate scale.
+    // It applies only to the African country fills; project circles and flow paths retain their existing colours.
+    const tealScale = [
+      [0, '#f8f6ef'], [0.16, '#e7e1c6'], [0.32, '#c9c486'],
+      [0.50, '#a2a974'], [0.68, '#748f75'], [0.84, '#476f78'], [1, '#183f61']
+    ];
+    const warmScale = [
+      [0, '#f6f1ea'], [0.22, '#f3d4a3'], [0.48, '#e6a64e'],
+      [0.75, '#db6c45'], [1, '#a3373f']
+    ];
+    const config = { responsive: true, displayModeBar: false, displaylogo: false };
+    const rendered = new Set();
+
+    const numberFormat = new Intl.NumberFormat('en-US');
+    function compact(value) {
+      if (value >= 1000000) return (value / 1000000).toFixed(value >= 10000000 ? 0 : 1) + 'M';
+      if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
+      return numberFormat.format(value);
+    }
+
+    const overseasByCountry = {};
+    arcs.forEach(function (arc) {
+      overseasByCountry[arc.to] = (overseasByCountry[arc.to] || 0) + arc.credits;
+    });
+    const overseasCredits = africaNames.map(function (name) { return overseasByCountry[name] || 0; });
+    function baseLayout(extra) {
+      return Object.assign({
+        // Opaque canvas keeps downloaded PNGs clean in viewers that render transparency as black.
+        paper_bgcolor: '#ffffff',
+        plot_bgcolor: '#ffffff',
+        margin: { l: 8, r: 8, t: 8, b: 8 },
+        font: { family: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif', color: '#314960' },
+        hoverlabel: { bgcolor: '#10243a', bordercolor: '#10243a', font: { color: '#ffffff', size: 12 } },
+        showlegend: false
+      }, extra || {});
+    }
+
+    function geoLayout(scope, extra) {
+      const base = {
+        scope: scope,
+        projection: { type: 'natural earth' },
+        showland: true,
+        landcolor: '#f1f5f3',
+        showocean: true,
+        oceancolor: '#f7fbfa',
+        showlakes: true,
+        lakecolor: '#f7fbfa',
+        showcountries: true,
+        countrycolor: '#c7d3d4',
+        countrywidth: 0.7,
+        showcoastlines: true,
+        coastlinecolor: '#b6c4c5',
+        coastlinewidth: 0.6,
+        showframe: false,
+        bgcolor: '#ffffff'
+      };
+      return Object.assign(base, extra || {});
+    }
+
+    // Sparse cartographic labels add orientation without competing with the data layers.
+    const mapLabelLayers = {
+      flow: {
+        waters: [
+          { lon: -49, lat: 7, text: '<i>Atlantic Ocean</i>' },
+          { lon: 56, lat: -25, text: '<i>Indian Ocean</i>' }
+        ],
+        context: [
+          { lon: -87, lat: 63, text: 'EXTERNAL BUYER<br>MARKETS' },
+          { lon: 16, lat: -38, text: 'AFRICAN HOST<br>COUNTRIES' }
+        ]
+      },
+      africa: {
+        waters: [
+          { lon: -20, lat: -12, text: '<i>Atlantic Ocean</i>' },
+          { lon: 55, lat: -22, text: '<i>Indian Ocean</i>' },
+          { lon: -1, lat: 1.8, text: '<i>Gulf of Guinea</i>' }
+        ],
+        context: []
+      },
+      world: {
+        waters: [
+          { lon: -37, lat: 5, text: '<i>Atlantic Ocean</i>' },
+          { lon: 70, lat: -20, text: '<i>Indian Ocean</i>' }
+        ],
+        context: [
+          { lon: 18, lat: -35, text: 'AFRICAN HOST<br>COUNTRIES' }
+        ]
+      }
+    };
+
+    function labelTrace(items, style) {
+      if (!items || !items.length) return null;
+      return {
+        type: 'scattergeo',
+        mode: 'text',
+        lon: items.map(function (item) { return item.lon; }),
+        lat: items.map(function (item) { return item.lat; }),
+        text: items.map(function (item) { return item.text; }),
+        textposition: 'middle center',
+        textfont: style,
+        hoverinfo: 'skip',
+        showlegend: false
+      };
+    }
+
+    function cartographicLabelTraces(view) {
+      const layers = mapLabelLayers[view] || { waters: [], context: [] };
+      const water = labelTrace(layers.waters, {
+        family: 'Georgia, Times New Roman, serif',
+        size: 11,
+        color: '#7495a3'
+      });
+      const context = labelTrace(layers.context, {
+        family: 'Inter, ui-sans-serif, system-ui, sans-serif',
+        size: 9,
+        color: '#71878c'
+      });
+      return [water, context].filter(Boolean);
+    }
+
+    function arcCoordinates(arc) {
+      const steps = 32;
+      const lats = [];
+      const lons = [];
+      const deltaLon = arc.dst_lon - arc.src_lon;
+      const bend = Math.min(22, 8 + Math.abs(deltaLon) * 0.1);
+      const direction = deltaLon >= 0 ? 1 : -1;
+      for (let i = 0; i <= steps; i += 1) {
+        const t = i / steps;
+        const lat = arc.src_lat + (arc.dst_lat - arc.src_lat) * t + bend * Math.sin(Math.PI * t);
+        const lon = arc.src_lon + deltaLon * t + direction * 2.2 * Math.sin(Math.PI * t);
+        lats.push(lat);
+        lons.push(lon);
+      }
+      return { lat: lats, lon: lons };
+    }
+
+    function flowLineTrace(arc) {
+      const points = arcCoordinates(arc);
+      const width = Math.max(1.1, Math.min(5.5, 0.85 + Math.log10(arc.credits / 1000000 + 1) * 2.15));
+      const label = '<b>' + arc.from + ' → ' + arc.to + '</b><br>' + numberFormat.format(arc.credits) + ' credits';
+      return {
+        type: 'scattergeo',
+        mode: 'lines',
+        lat: points.lat,
+        lon: points.lon,
+        line: { color: 'rgba(238,117,100,0.62)', width: width },
+        text: points.lat.map(function () { return label; }),
+        hovertemplate: '%{text}<extra></extra>',
+        showlegend: false
+      };
+    }
+
+    function countryBubbleTrace(showText) {
+      return {
+        type: 'scattergeo',
+        mode: showText ? 'markers+text' : 'markers',
+        lat: bubbles.map(function (b) { return b.lat; }),
+        lon: bubbles.map(function (b) { return b.lon; }),
+        marker: {
+          size: bubbles.map(function (b) { return Math.max(7, Math.min(31, 5 + Math.log10(b.count + 1) * 7)); }),
+          color: 'rgba(32,168,164,0.78)',
+          line: { color: '#ffffff', width: 1.2 },
+          opacity: 0.92
+        },
+        text: showText ? bubbles.map(function (b) { return b.credits >= 15000000 ? '<b>' + b.country + '</b>' : ''; }) : undefined,
+        textposition: 'bottom center',
+        textfont: { size: 9, color: '#274b59' },
+        hovertemplate: bubbles.map(function (b) {
+          return '<b>' + b.country + '</b><br>' + numberFormat.format(b.credits) + ' credits<br>' + numberFormat.format(b.count) + ' projects<extra></extra>';
+        }),
+        showlegend: false
+      };
+    }
+
+    function destinationChoropleth(colorscale, title) {
+      return {
+        type: 'choropleth',
+        locations: africaISO,
+        z: overseasCredits,
+        text: africaNames,
+        locationmode: 'ISO-3',
+        colorscale: colorscale,
+        // African host-country outlines are intentionally stronger than the global base map.
+        marker: { line: { color: '#4b7176', width: 1.28 } },
+        colorbar: {
+          title: { text: title, side: 'top', font: { size: 11, color: '#314960' } },
+          tickformat: '.2s',
+          tickfont: { size: 10, color: '#5f7482' },
+          thickness: 12,
+          len: 0.5,
+          y: 0.52,
+          x: 0.02,
+          outlinewidth: 0,
+          bgcolor: 'rgba(255,255,255,0.72)'
+        },
+        hovertemplate: '<b>%{text}</b><br>%{z:,.0f} overseas-linked credits<extra></extra>',
+        showlegend: false
+      };
+    }
+
+    function africaBorderTrace() {
+      return {
+        type: 'choropleth',
+        locations: africaISO,
+        z: africaISO.map(function () { return 0; }),
+        locationmode: 'ISO-3',
+        colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0)']],
+        marker: { line: { color: '#4b7176', width: 1.28 } },
+        hoverinfo: 'skip',
+        showscale: false,
+        showlegend: false
+      };
+    }
+
+    function buyerSourceTrace() {
+      const sources = {};
+      arcs.forEach(function (arc) {
+        if (!sources[arc.from]) sources[arc.from] = { name: arc.from, lat: arc.src_lat, lon: arc.src_lon, credits: 0 };
+        sources[arc.from].credits += arc.credits;
+      });
+      const values = Object.values(sources);
+      return {
+        type: 'scattergeo',
+        mode: 'markers+text',
+        lat: values.map(function (s) { return s.lat; }),
+        lon: values.map(function (s) { return s.lon; }),
+        marker: { size: 12, color: '#d94c4c', line: { color: '#ffffff', width: 1.5 } },
+        text: values.map(function (s) { return '<b>' + s.name + '</b>'; }),
+        textposition: 'top center',
+        textfont: { size: 10, color: '#8f2f38' },
+        hovertemplate: values.map(function (s) { return '<b>' + s.name + '</b><br>' + numberFormat.format(s.credits) + ' credits across named pathways<extra></extra>'; }),
+        showlegend: false
+      };
+    }
+
+    function drawFlow() {
+      const traces = [destinationChoropleth(tealScale, 'Linked credits')];
+      cartographicLabelTraces('flow').forEach(function (trace) { traces.push(trace); });
+      arcs.slice().sort(function (a, b) { return a.credits - b.credits; }).forEach(function (arc) { traces.push(flowLineTrace(arc)); });
+      traces.push(countryBubbleTrace(false));
+      traces.push(buyerSourceTrace());
+      return Plotly.newPlot('flow-chart', traces, baseLayout({
+        geo: geoLayout('world', {
+          lataxis: { range: [-42, 70] },
+          lonaxis: { range: [-125, 70] }
+        })
+      }), config);
+    }
+
+    function drawAfrica() {
+      const traces = [destinationChoropleth(tealScale, 'Linked credits')];
+      cartographicLabelTraces('africa').forEach(function (trace) { traces.push(trace); });
+      traces.push(countryBubbleTrace(true));
+      return Plotly.newPlot('africa-chart', traces, baseLayout({
+        geo: geoLayout('africa', {
+          showlakes: true,
+          lakecolor: '#f7fbfa'
+        })
+      }), config);
+    }
+
+    function drawWorld() {
+      const buyerLocations = ['USA', 'GBR', 'FRA', 'CHN', 'CHE', 'AUS', 'IND', 'NLD'];
+      const buyerValues = [66947236, 59077888, 3227958, 1589229, 1461248, 820613, 434754, 0];
+      const buyerNames = ['United States', 'United Kingdom', 'France', 'China', 'Switzerland', 'Australia', 'India', 'Netherlands'];
+      return Plotly.newPlot('world-chart', [{
+        type: 'choropleth',
+        locations: africaISO.concat(buyerLocations),
+        z: overseasCredits.concat(buyerValues),
+        text: africaNames.concat(buyerNames),
+        locationmode: 'ISO-3',
+        colorscale: warmScale,
+        marker: { line: { color: '#d2c9bd', width: 0.55 } },
+        colorbar: {
+          title: { text: 'Recorded credits', side: 'top', font: { size: 11, color: '#314960' } },
+          tickformat: '.2s', tickfont: { size: 10, color: '#5f7482' }, thickness: 12, len: 0.5, y: 0.52, x: 0.02, outlinewidth: 0
+        },
+        hovertemplate: '<b>%{text}</b><br>%{z:,.0f} credits<extra></extra>',
+        showlegend: false
+      }, africaBorderTrace()].concat(cartographicLabelTraces('world')), baseLayout({ geo: geoLayout('world') }), config);
+    }
+
+    function drawBuyers() {
+      const values = buyerTotals.slice().sort(function (a, b) { return b.credits - a.credits; });
+      return Plotly.newPlot('buyers-chart', [{
+        type: 'bar',
+        x: values.map(function (d) { return d.credits; }),
+        y: values.map(function (d) { return d.name; }),
+        orientation: 'h',
+        marker: {
+          color: values.map(function (d, i) { return i < 2 ? '#d94c4c' : (i < 4 ? '#e8866f' : '#efbd72'); }),
+          line: { color: 'rgba(255,255,255,0.85)', width: 1 }
+        },
+        text: values.map(function (d) { return compact(d.credits); }),
+        textposition: 'outside',
+        textfont: { color: '#314960', size: 11 },
+        cliponaxis: false,
+        hovertemplate: '<b>%{y}</b><br>%{x:,.0f} credits<extra></extra>',
+        showlegend: false
+      }], baseLayout({
+        margin: { l: 145, r: 55, t: 24, b: 54 },
+        xaxis: {
+          title: { text: 'Credits issued to Africa', font: { size: 12, color: '#5f7482' } },
+          tickformat: '.2s',
+          gridcolor: '#e7eeee',
+          zerolinecolor: '#cad7d7',
+          color: '#5f7482'
+        },
+        yaxis: { autorange: 'reversed', color: '#314960', tickfont: { size: 12 } }
+      }), config);
+    }
+
+    const renderers = { flow: drawFlow, africa: drawAfrica, world: drawWorld, buyers: drawBuyers };
+
+    function updateStory(panel) {
+      const story = stories[panel];
+      document.getElementById('story-kicker').textContent = story.kicker;
+      document.getElementById('story-title').textContent = story.title;
+      document.getElementById('story-copy').textContent = story.copy;
+      const list = document.getElementById('story-list');
+      list.innerHTML = story.points.map(function (point, index) {
+        return '<li><span class="insight-index">0' + (index + 1) + '</span><span>' + point + '</span></li>';
+      }).join('');
+    }
+
+    function resizePanel(panel) {
+      const chart = document.getElementById(panel + '-chart');
+      if (chart && rendered.has(panel) && window.Plotly) Plotly.Plots.resize(chart);
+    }
+
+    function renderPanel(panel) {
+      if (!window.Plotly) {
+        document.getElementById(panel + '-chart').innerHTML = '<div class="loading-note">The interactive map library could not be loaded.</div>';
+        return;
+      }
+      if (rendered.has(panel)) {
+        setExportEnabled(panel, true);
+        requestAnimationFrame(function () { resizePanel(panel); });
+        return;
+      }
+      setExportEnabled(panel, false);
+      renderers[panel]().then(function () {
+        rendered.add(panel);
+        setExportEnabled(panel, true);
+        requestAnimationFrame(function () { resizePanel(panel); });
+      });
+    }
+
+    function setExportEnabled(panel, enabled) {
+      const button = document.querySelector('.export-button[data-export="' + panel + '"]');
+      if (button) button.disabled = !enabled;
+    }
+
+    function exportChart(panel) {
+      const chart = document.getElementById(panel + '-chart');
+      const button = document.querySelector('.export-button[data-export="' + panel + '"]');
+      const status = document.getElementById('export-status-' + panel);
+      if (!chart || !button || !window.Plotly || !rendered.has(panel)) {
+        if (status) status.textContent = 'Map is still loading. Please try again in a moment.';
+        return;
+      }
+
+      const originalLabel = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Preparing PNG…';
+      if (status) status.textContent = 'The embedded colour key will be included.';
+
+      const width = Math.max(1400, Math.round(chart.clientWidth * 2));
+      const height = Math.max(900, Math.round(chart.clientHeight * 2));
+      Plotly.toImage(chart, { format: 'png', width: width, height: height, scale: 1 })
+        .then(function (dataUrl) {
+          const download = document.createElement('a');
+          download.href = dataUrl;
+          download.download = 'carbon-grab-' + panel + '-map.png';
+          document.body.appendChild(download);
+          download.click();
+          download.remove();
+          if (status) status.textContent = 'PNG saved with the chart colour key.';
+        })
+        .catch(function () {
+          if (status) status.textContent = 'The PNG could not be created. Please try again.';
+        })
+        .finally(function () {
+          button.disabled = false;
+          button.textContent = originalLabel;
+        });
+    }
+
+    function activatePanel(panel, moveFocus) {
+      document.querySelectorAll('.tab').forEach(function (tab) {
+        const isActive = tab.dataset.panel === panel;
+        tab.setAttribute('aria-selected', String(isActive));
+        if (isActive && moveFocus) tab.focus();
+      });
+      document.querySelectorAll('.panel').forEach(function (section) {
+        section.hidden = section.id !== 'panel-' + panel;
+      });
+      updateStory(panel);
+      renderPanel(panel);
+    }
+
+    document.querySelectorAll('.export-button').forEach(function (button) {
+      button.addEventListener('click', function () { exportChart(button.dataset.export); });
+    });
+
+    document.querySelectorAll('.tab').forEach(function (tab) {
+      tab.addEventListener('click', function () { activatePanel(tab.dataset.panel, false); });
+      tab.addEventListener('keydown', function (event) {
+        const tabs = Array.from(document.querySelectorAll('.tab'));
+        const current = tabs.indexOf(tab);
+        if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+          event.preventDefault();
+          const next = event.key === 'ArrowRight' ? (current + 1) % tabs.length : (current - 1 + tabs.length) % tabs.length;
+          activatePanel(tabs[next].dataset.panel, true);
+        }
+      });
+    });
+
+    window.addEventListener('resize', function () {
+      rendered.forEach(function (panel) {
+        const active = !document.getElementById('panel-' + panel).hidden;
+        if (active) resizePanel(panel);
+      });
+    });
+
+    updateStory('flow');
+    renderPanel('flow');
+  </script>
+</body>
+</html>

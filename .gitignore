@@ -1,0 +1,18 @@
+# Raw source data (too large / available from source)
+credits.csv
+projects.csv
+export_emissions.csv
+carbon_flows_aggregated.csv
+
+# Original/backup files
+carbon_grab_map.original.html
+
+# Generated doc (use .md instead)
+DATA_SOURCES_REPORT.docx
+
+# Directories
+fig1/
+
+# OS files
+.DS_Store
+Thumbs.db
